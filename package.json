@@ -4,8 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "forever start -o logs/subreddit_monitor_stdout.log -e logs/subreddit_monitor_err.log index.js"
+    "start": "node index.js"
   },
   "repository": {
     "type": "git",
@@ -18,8 +17,11 @@
   },
   "homepage": "https://github.com/bpourkazemi/subreddit-monitor",
   "dependencies": {
-    "lodash": "^4.12.0",
+    "lodash": "^4.17.15",
     "nodemailer": "^2.4.0",
-    "request": "^2.72.0"
+    "open": "^7.0.3",
+    "request": "^2.88.2",
+    "tty": "^1.0.1",
+    "util": "^0.12.2"
   }
 }

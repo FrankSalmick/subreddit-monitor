@@ -1,5 +1,11 @@
-Monitors any subreddit for new posts, checking whether their titles match a stored regex. If the regex is matched, an email is sent to subscribers.
+Monitors any subreddit for new posts, checking whether their titles match a stored regex. If the regex is matched, a message is printed to the screen
 
-Using this to monitor /r/churning for the lucrative AMEX Platinum Card deal.
+Someone else used this to monitor /r/churning for the lucrative AMEX Platinum Card deal. I used this to monitor /r/mechmarket
 
-Note: If you want to use this code, you'll need to write your own email.js module to handle authenticating and sending an email.
+The only difference between this and the version I forked is that this one will print data to the screen.
+
+Press h at any time the program is focused to see a list of commands
+
+Launch with node index.js (You will need to install node.js)
+
+npm packages requried: `npm i lodash util request open`
