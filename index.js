@@ -51,13 +51,13 @@ let checkForNewMatches = (subreddits, loggingEnabled) => {
                         let permalink = _.get(child, 'data.permalink', '');
 
 
-                        if (loggingEnabled && title.match(subreddit.regex) != null) {
+                        if (title.match(subreddit.regex) != null) {
                             if (!_.find(subreddit2Matches[subreddit.r], o => o.id === id)) {
                                 subreddit2Matches[subreddit.r].push({
                                     id: id,
                                     timestamp: (new Date()).getTime()
                                 });
-                                printNotification(subreddit, { title: title, permalink: permalink });  // TODO: Batch email alerts
+                                printNotification(subreddit, { title: title, permalink: permalink }, loggingEnabled); 
                             }
                         }
                     });
@@ -75,10 +75,17 @@ let checkForNewMatches = (subreddits, loggingEnabled) => {
 // Honestly this band aid exists because I am just too lazy to do it the right way (scan through the subreddit2Matches object, maybe make a stack of references to the objects, idk. I'll figure it out later.)
 // I'll do it eventually but right now I just want this to work.
 var lastLink;
-let printNotification = (subreddit, matchingPost) => {
+let printNotification = (subreddit, matchingPost, loggingEnabled) => {
+    if (!loggingEnabled) return;
+    printTime();
     lastLink = "https://reddit.com" + matchingPost.permalink;
-    console.log("New post in " + FG_CYAN + "/r/" + subreddit.r + ": " + FG_GREEN + matchingPost.title + FG_WHITE);
+    console.log(" New post in " + FG_CYAN + "/r/" + subreddit.r + ": " + FG_GREEN + _.unescape(matchingPost.title) + FG_WHITE);
     console.log(lastLink);
+}
+
+let printTime = () => {
+    var time = new Date();
+    process.stdout.write(FG_WHITE + "[" + FG_CYAN + time.getHours() % 12 + ":" + time.getMinutes() + FG_WHITE + "]");
 }
 
 const ONE_WEEK = 1000 * 60 * 60 * 24 * 7;
@@ -126,7 +133,7 @@ process.stdin.on('keypress', (str, key) => {
     }
 });
 // Don't log to the screen while we build the list of posts we've already seen
-checkForNewMatches(REDDIT_INFO.subreddits, true);
-setInterval(() => checkForNewMatches(REDDIT_INFO.subreddits, true), 1000*60*10);
+checkForNewMatches(REDDIT_INFO.subreddits, false);
+setInterval(() => checkForNewMatches(REDDIT_INFO.subreddits, true), 1000*60*.5);
 // make all text white instead of grey
-console.log(FG_WHITE + "Ready. Monitoring " + Object.keys(REDDIT_INFO.subreddits).length + " subreddits. Press h any time for a list of commands.");
+console.log(FG_WHITE + "Ready, monitoring " + Object.keys(REDDIT_INFO.subreddits).length + " subreddits. Press h for a list of commands.");
