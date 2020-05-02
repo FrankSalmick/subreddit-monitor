@@ -3,19 +3,28 @@
 let request = require('request');
 let util    = require('util');
 let _       = require('lodash');
-let readline= require('readline');
-let open    = require('open');
+let readline = require('readline');
+let launchProgram = require('open');
 
 const FG_GREEN = "\x1b[32m";
 const FG_WHITE = "\x1b[37m";
 const FG_CYAN = "\x1b[36m"
+const FG_MAGENTA = "\x1b[35m";
+const FG_RED = "\x1b[31m";
+const RESET = "\x1b[0m";
+const BG_WHITE = "\x1b[47m";
 
 const REDDIT_INFO = {
     subreddits: [
         {
             r: 'mechmarket',
-            regex: ".*",
-            description: 'Watch for new posts'
+            regex: ".*[W].*(iris|keebio|keeb.io| keeb |split|quefrency|nyquist|levinson|Ergodicity|viterbi|assembl).*".toLowerCase(),
+            onRegexFail: (subreddit, title, permalink, loggingEnabled) => {
+                printNotification(subreddit, { title: title, permalink: permalink }, false, false);
+            },
+            onRegexMatch: (subreddit, title, permalink, loggingEnabled) => {
+                printNotification(subreddit, { title: title, permalink: permalink }, loggingEnabled, true)
+            }
         }
     ],
     topNewPostsUrl: 'https://www.reddit.com/r/%s/new.json?sort=new',
@@ -51,13 +60,15 @@ let checkForNewMatches = (subreddits, loggingEnabled) => {
                         let permalink = _.get(child, 'data.permalink', '');
 
 
-                        if (title.match(subreddit.regex) != null) {
-                            if (!_.find(subreddit2Matches[subreddit.r], o => o.id === id)) {
-                                subreddit2Matches[subreddit.r].push({
-                                    id: id,
-                                    timestamp: (new Date()).getTime()
-                                });
-                                printNotification(subreddit, { title: title, permalink: permalink }, loggingEnabled); 
+                        if (!_.find(subreddit2Matches[subreddit.r], o => o.id === id)) {
+                            subreddit2Matches[subreddit.r].push({
+                                id: id,
+                                timestamp: (new Date()).getTime()
+                            });
+                            if (title.toLowerCase().match(subreddit.regex) != null) {
+                                subreddit.onRegexMatch(subreddit, title, permalink, loggingEnabled);
+                            } else {
+                            subreddit.onRegexFail(subreddit, title, permalink, loggingEnabled);
                             }
                         }
                     });
@@ -75,17 +86,24 @@ let checkForNewMatches = (subreddits, loggingEnabled) => {
 // Honestly this band aid exists because I am just too lazy to do it the right way (scan through the subreddit2Matches object, maybe make a stack of references to the objects, idk. I'll figure it out later.)
 // I'll do it eventually but right now I just want this to work.
 var lastLink;
-let printNotification = (subreddit, matchingPost, loggingEnabled) => {
+var printNotification = (subreddit, matchingPost, loggingEnabled, regexMatch) => {
     if (!loggingEnabled) return;
     printTime();
     lastLink = "https://reddit.com" + matchingPost.permalink;
-    console.log(" New post in " + FG_CYAN + "/r/" + subreddit.r + ": " + FG_GREEN + _.unescape(matchingPost.title) + FG_WHITE);
+    process.stdout.write(" New post in " + FG_CYAN + "/r/" + subreddit.r + ": ");
+    // if (regexmatch) {
+    //     process.stdout.write(BG_WHITE);
+    // } 
+    console.log(FG_GREEN + _.unescape(matchingPost.title) + RESET + FG_WHITE);
     console.log(lastLink);
 }
 
 let printTime = () => {
     var time = new Date();
-    process.stdout.write(FG_WHITE + "[" + FG_CYAN + time.getHours() % 12 + ":" + time.getMinutes() + FG_WHITE + "]");
+    var hour = (time.getHours() % 24).toString().padStart(2, '0');
+    var minute = time.getMinutes().toString().padStart(2, '0');
+    // process.stdout.write(FG_WHITE + "[" + FG_CYAN + hour + ":" + minute + FG_WHITE + "]");
+    process.stdout.write(FG_WHITE + "[" + hour + ":" + minute + "] ");
 }
 
 const ONE_WEEK = 1000 * 60 * 60 * 24 * 7;
@@ -101,20 +119,21 @@ let clearStaleMatches = matches => {
 // listen to keypresses from the user
 const keyResponses = {
     "h": () => {
-        console.log("h: Print this menu\no: Open the most recent URL\ns: Print subreddits and their properties\nc: Clear the screen\nq: Quit");
+        console.log("Help menu:\nh: Print this menu\no: Open the most recent URL\ns: Print subreddits and their properties\nq: Quit");
     }, 
     "o": () => {
         if (lastLink == null) {
             console.log("No link found.")
         } else {
-            open(lastLink);
+            launchProgram(lastLink);
+            console.log(FG_MAGENTA + "Opened." + FG_WHITE);
         }
     },
     "s": () => {
         console.log(REDDIT_INFO.subreddits);
     },
-    "c": () => {
-        console.clear();
+    "r": () => {
+        console.log(FG_MAGENTA + "Read." + FG_WHITE);
     },
     "q": () => {
         process.exit(0);
@@ -126,6 +145,7 @@ process.stdin.setRawMode(true);
 
 process.stdin.on('keypress', (str, key) => {
     var functionToRun = keyResponses[str];
+    printTime();
     if (functionToRun != undefined) {
         functionToRun();
     } else {
@@ -133,7 +153,7 @@ process.stdin.on('keypress', (str, key) => {
     }
 });
 // Don't log to the screen while we build the list of posts we've already seen
-checkForNewMatches(REDDIT_INFO.subreddits, false);
+checkForNewMatches(REDDIT_INFO.subreddits, true);
 setInterval(() => checkForNewMatches(REDDIT_INFO.subreddits, true), 1000*60*.5);
 // make all text white instead of grey
 console.log(FG_WHITE + "Ready, monitoring " + Object.keys(REDDIT_INFO.subreddits).length + " subreddits. Press h for a list of commands.");
